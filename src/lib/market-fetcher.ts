@@ -246,13 +246,15 @@ export async function fetchWatchlist(symbols?: string[]): Promise<StockQuote[]> 
   const watchSymbols = symbols || DEFAULT_WATCHLIST;
   const quotes = await fetchQuotes(watchSymbols);
 
-  return watchSymbols.map(symbol => {
+  return watchSymbols.flatMap(symbol => {
     const q = quotes.get(symbol) as Record<string, number | string | undefined> | undefined;
-    if (!q) return null;
-    return {
+    if (!q) return [];
+    const price = (q.regularMarketPrice as number) ?? 0;
+    if (price <= 0) return [];
+    return [{
       symbol,
       name: (q.shortName as string) || (q.longName as string) || symbol,
-      price: (q.regularMarketPrice as number) ?? 0,
+      price,
       change: (q.regularMarketChange as number) ?? 0,
       changePercent: (q.regularMarketChangePercent as number) ?? 0,
       currency: (q.currency as string) ?? 'EUR',
@@ -264,8 +266,8 @@ export async function fetchWatchlist(symbols?: string[]): Promise<StockQuote[]> 
       fiftyTwoWeekLow: (q.fiftyTwoWeekLow as number) ?? undefined,
       exchange: (q.exchange as string) ?? '',
       updatedAt: new Date().toISOString(),
-    };
-  }).filter((q): q is StockQuote => q !== null && q.price > 0);
+    } satisfies StockQuote];
+  });
 }
 
 /**
